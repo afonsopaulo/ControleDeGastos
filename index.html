@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Gastos Pessoal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .feedback-message { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; font-size: 0.875rem; z-index: 1000; opacity: 0; transform: translateY(-20px); transition: opacity 0.3s ease-out, transform 0.3s ease-out; }
+        .feedback-message.show { opacity: 1; transform: translateY(0); }
+        .feedback-message.success { background-color: #10B981; color: white; }
+        .feedback-message.error { background-color: #EF4444; color: white; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
+        .dark .modal { background-color: rgba(0,0,0,0.7); }
+        .modal-content { margin: 10% auto; padding: 24px; border-radius: 8px; width: 90%; max-width: 500px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 16px; }
+        .modal-title { font-size: 1.25rem; font-weight: 600; }
+        .modal-close { font-size: 1.5rem; font-weight: bold; cursor: pointer; background: none; border: none; }
+        .modal-body { padding-top: 16px; }
+        .modal-footer { padding-top: 16px; display: flex; justify-content: flex-end; gap: 8px; }
+        .dark input[type="date"]::-webkit-calendar-picker-indicator,
+        .dark input[type="month"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-5xl">
+
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl md:text-4xl font-bold text-indigo-600 dark:text-indigo-400">Meu Controle de Gastos</h1>
+        </header>
+
+        <section id="auth-section" class="mb-8 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-gray-700/50">
+            <h2 class="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300">Autenticação</h2>
+            <div id="auth-content">
+                <p class="text-gray-600 dark:text-gray-400">Carregando...</p>
+            </div>
+            <div id="user-info" class="hidden mt-4">
+                <p>Logado como: <span id="user-email" class="font-semibold"></span> (<span id="user-id-display" class="text-xs text-gray-500 dark:text-gray-400"></span>)</p>
+                <button id="logout-button" class="mt-2 px-4 py-2 bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 text-white rounded-md transition duration-150">Sair</button>
+            </div>
+        </section>
+
+        <main id="main-content" class="hidden">
+
+            <section id="dashboard-section" class="mb-8 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-gray-700/50">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-6">
+                    <h2 class="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-4 sm:mb-0">Resumo Financeiro</h2>
+                    <div id="dashboard-filters" class="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 w-full sm:w-auto">
+                        <div class="w-full sm:w-auto">
+                            <label for="period-filter" class="sr-only">Filtrar Período</label>
+                            <select id="period-filter" name="period-filter" class="block w-full sm:w-auto px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                <option value="all_time">Desde o início</option>
+                                <option value="this_month" selected>Este Mês</option>
+                                <option value="last_month">Mês Passado</option>
+                                <option value="this_year">Este Ano</option>
+                                <option value="custom">Personalizado</option>
+                            </select>
+                        </div>
+                        <div id="custom-date-range-filter" class="hidden flex flex-col sm:flex-row items-center gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
+                            <div class="w-full sm:w-auto">
+                                <label for="start-date-filter" class="sr-only">Data Inicial</label>
+                                <input type="date" id="start-date-filter" name="start-date-filter" class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            </div>
+                            <span class="text-gray-500 dark:text-gray-400 hidden sm:inline">-</span>
+                            <div class="w-full sm:w-auto">
+                                <label for="end-date-filter" class="sr-only">Data Final</label>
+                                <input type="date" id="end-date-filter" name="end-date-filter" class="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            </div>
+                            <button id="apply-custom-filter-button" class="w-full sm:w-auto mt-2 sm:mt-0 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white font-semibold rounded-md text-sm">Aplicar</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                    <div class="p-4 bg-green-100 dark:bg-green-900/60 rounded-lg">
+                        <h3 class="text-sm font-medium text-green-800 dark:text-green-300 uppercase tracking-wider">Receita Total</h3>
+                        <p id="total-income" class="text-2xl font-bold text-green-700 dark:text-green-200 mt-1">R$ 0,00</p>
+                    </div>
+                    <div class="p-4 bg-red-100 dark:bg-red-900/60 rounded-lg">
+                        <h3 class="text-sm font-medium text-red-800 dark:text-red-300 uppercase tracking-wider">Despesa Total</h3>
+                        <p id="total-expense" class="text-2xl font-bold text-red-700 dark:text-red-200 mt-1">R$ 0,00</p>
+                    </div>
+                    <div class="p-4 bg-blue-100 dark:bg-blue-900/60 rounded-lg">
+                        <h3 class="text-sm font-medium text-blue-800 dark:text-blue-300 uppercase tracking-wider">Saldo Atual</h3>
+                        <p id="current-balance" class="text-2xl font-bold text-blue-700 dark:text-blue-200 mt-1">R$ 0,00</p>
+                    </div>
+                </div>
+                 <div id="chart-container" class="mt-8">
+                     <h3 class="text-lg font-semibold mb-4 text-gray-700 dark:text-gray-300">Despesas por Categoria (Em breve)</h3>
+                     <div class="p-8 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-center text-gray-500 dark:text-gray-400">
+                         Gráficos aparecerão aqui!
+                     </div>
+                 </div>
+            </section>
+
+            <section id="budgets-section" class="mb-8 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-gray-700/50">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-6">
+                    <h2 class="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-4 sm:mb-0">Orçamentos Mensais</h2>
+                    <div>
+                        <label for="budget-month-filter" class="text-sm font-medium text-gray-700 dark:text-gray-300 mr-2">Mês:</label>
+                        <input type="month" id="budget-month-filter" name="budget-month-filter"
+                               class="px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    </div>
+                </div>
+
+                <div id="budget-list-container" class="space-y-6">
+                    <p id="loading-budgets-message" class="text-gray-500 dark:text-gray-400">Carregando categorias de despesa...</p>
+                </div>
+            </section>
+
+            <section id="add-transaction-section" class="mb-8 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-gray-700/50">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300">Adicionar / Editar Transação</h2>
+                <form id="transaction-form" class="space-y-4">
+                    <div>
+                        <label for="descricao" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Descrição</label>
+                        <input type="text" id="descricao" name="descricao" required class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 sm:text-sm placeholder-gray-400 dark:placeholder-gray-500" placeholder="Ex: Compras do mês">
+                    </div>
+                    <div>
+                        <label for="valor" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Valor (R$)</label>
+                        <input type="number" id="valor" name="valor" step="0.01" required class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 sm:text-sm placeholder-gray-400 dark:placeholder-gray-500" placeholder="Ex: 150.75">
+                    </div>
+                    <div>
+                        <label for="data_transacao" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Data da Transação</label>
+                        <input type="date" id="data_transacao" name="data_transacao" required class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="categoria_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Categoria</label>
+                        <select id="categoria_id" name="categoria_id" required class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 sm:text-sm">
+                            <option value="">Carregando categorias...</option>
+                        </select>
+                        <button type="button" id="manage-categories-button" class="mt-2 text-sm text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300">Gerenciar Categorias</button>
+                    </div>
+                    <div>
+                        <label for="tipo_transacao" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo</label>
+                        <select id="tipo_transacao" name="tipo_transacao" required class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 sm:text-sm">
+                            <option value="despesa">Despesa</option>
+                            <option value="receita">Receita</option>
+                        </select>
+                    </div>
+                    <input type="hidden" id="transaction-id">
+                    <button type="submit" id="save-transaction-button" class="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white font-semibold rounded-md transition duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-indigo-400">
+                        Salvar Transação
+                    </button>
+                    <button type="button" id="cancel-edit-button" class="hidden w-full mt-2 px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-md transition duration-150">
+                        Cancelar Edição
+                    </button>
+                </form>
+            </section>
+
+            <section id="list-transactions-section" class="mb-8 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-gray-700/50">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700 dark:text-gray-300">Minhas Transações</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead class="bg-gray-50 dark:bg-gray-700">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Descrição</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Valor</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Data</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Categoria</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo</th>
+                                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactions-table-body" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            <tr><td colspan="6" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center">Nenhuma transação encontrada.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <div id="category-modal" class="modal">
+        <div class="modal-content bg-white dark:bg-gray-800 shadow-xl dark:shadow-gray-700/50">
+            <div class="modal-header border-b border-gray-200 dark:border-gray-700">
+                <h3 id="category-modal-title" class="modal-title text-gray-900 dark:text-gray-100">Gerenciar Categorias</h3>
+                <button id="category-modal-close" class="modal-close text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="category-form" class="space-y-4 mb-6">
+                    <div>
+                        <label for="category-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nome</label>
+                        <input type="text" id="category-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Ex: Lazer">
+                    </div>
+                    <div>
+                        <label for="category-type" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Tipo</label>
+                        <select id="category-type" required class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            <option value="despesa">Despesa</option>
+                            <option value="receita">Receita</option>
+                        </select>
+                    </div>
+                    <input type="hidden" id="category-id">
+                    <button type="submit" class="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white font-semibold rounded-md">Salvar Categoria</button>
+                </form>
+                <h4 class="text-md font-semibold mb-2 text-gray-700 dark:text-gray-300">Categorias Existentes</h4>
+                <ul id="category-list" class="space-y-2 max-h-60 overflow-y-auto p-2 border border-gray-200 dark:border-gray-600 rounded-md">
+                    <li class="text-gray-500 dark:text-gray-400">Carregando...</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirmation-modal" class="modal">
+        <div class="modal-content bg-white dark:bg-gray-800 shadow-xl dark:shadow-gray-700/50">
+            <div class="modal-header border-b border-gray-200 dark:border-gray-700">
+                <h3 id="confirmation-modal-title" class="modal-title text-gray-900 dark:text-gray-100">Confirmar Ação</h3>
+                <button id="confirmation-modal-close" class="modal-close text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmation-modal-message" class="text-gray-700 dark:text-gray-300">Você tem certeza?</p>
+            </div>
+            <div class="modal-footer">
+                <button id="confirm-action-button" class="px-4 py-2 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 text-white rounded-md">Confirmar</button>
+                <button id="cancel-action-button" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 rounded-md">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="feedback-message-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
+
+</body>
+</html>
